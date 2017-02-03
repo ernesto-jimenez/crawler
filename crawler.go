@@ -1,7 +1,6 @@
 package crawler
 
 import (
-	"container/list"
 	"errors"
 	"fmt"
 	"net/http"
@@ -64,17 +63,22 @@ func (r *Runner) Crawl(startURL string, crawlFn CrawlFunc) error {
 	}
 
 	// initialise the queue
-	queued := make(map[string]bool)
-	queue := list.New()
+	queue := NewInMemoryQueue()
+	queue.PushBack(req)
 
 	// add the first URL
-	queue.PushBack(req)
+	queued := make(map[string]bool)
 	queued[req.URL.String()] = true
 
 	// crawl
-	for e := queue.Front(); e != nil; e = queue.Front() {
-		queue.Remove(e)
-		req := e.Value.(*Request)
+	for {
+		req, err := queue.PopFront()
+		if err != nil {
+			return err
+		}
+		if req == nil {
+			return nil
+		}
 		if r.checkFetch != nil && !r.checkFetch(req.URL) {
 			continue
 		}
@@ -102,7 +106,6 @@ func (r *Runner) Crawl(startURL string, crawlFn CrawlFunc) error {
 			}
 		}
 	}
-	return nil
 }
 
 func (r *Runner) fetch(req *Request) (*Response, error) {
