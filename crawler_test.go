@@ -4,7 +4,6 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -48,8 +47,8 @@ func TestMaxDepth(t *testing.T) {
 }
 
 func TestCheckFetch(t *testing.T) {
-	c, err := New(WithCheckFetch(func(u *url.URL) bool {
-		return u.Path == "/depth-one.html"
+	c, err := New(WithCheckFetch(func(req *Request) bool {
+		return req.URL.Path == "/depth-one.html"
 	}))
 	require.NoError(t, err)
 

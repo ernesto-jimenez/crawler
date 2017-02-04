@@ -53,7 +53,7 @@ func (w *Worker) Run(ctx context.Context, q Queue) error {
 		if req == nil {
 			return nil
 		}
-		if !w.checkFetch.CheckFetch(req.URL) {
+		if !w.checkFetch.CheckFetch(req) {
 			continue
 		}
 		res, err := fetch(w.client, req)

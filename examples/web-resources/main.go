@@ -107,7 +107,7 @@ func main() {
 	}
 }
 
-func hostCheck(includeHosts, excludeHosts string) func(u *url.URL) bool {
+func hostCheck(includeHosts, excludeHosts string) crawler.CheckFetchFunc {
 	includedHosts := make(map[string]bool)
 	for _, host := range strings.Split(includeHosts, ",") {
 		host = strings.TrimSpace(host)
@@ -120,7 +120,8 @@ func hostCheck(includeHosts, excludeHosts string) func(u *url.URL) bool {
 		excludedHosts[host] = true
 	}
 
-	return func(u *url.URL) bool {
+	return func(req *crawler.Request) bool {
+		u := req.URL
 		if excludedHosts[u.Host] {
 			log.Printf("excluded: %s", u.String())
 			return false
