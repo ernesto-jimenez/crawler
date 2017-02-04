@@ -40,8 +40,6 @@ func NewWorker(fn CrawlFunc, opts ...Option) (*Worker, error) {
 
 // Run starts processing requests from the queue
 func (w *Worker) Run(ctx context.Context, q Queue) error {
-	queued := make(map[string]bool)
-
 	for {
 		if err := ctx.Err(); err != nil {
 			return err
@@ -69,14 +67,12 @@ func (w *Worker) Run(ctx context.Context, q Queue) error {
 			continue
 		}
 		// Mark the response as visited since it might be different to the original URL due to redirects
-		queued[res.URL] = true
 		if w.maxDepth > 0 && w.maxDepth <= req.depth {
 			continue
 		}
 		for _, link := range res.Links {
-			if req, err := nextRequest(res, link.URL); err == nil && !queued[req.URL.String()] {
+			if req, err := nextRequest(res, link.URL); err == nil {
 				q.PushBack(req)
-				queued[req.URL.String()] = true
 			}
 		}
 	}

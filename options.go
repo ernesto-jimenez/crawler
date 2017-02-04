@@ -3,6 +3,7 @@ package crawler
 import (
 	"fmt"
 	"net/http"
+	"sync"
 )
 
 // Option is used to provide optional configuration to a crawler
@@ -39,4 +40,20 @@ func WithCheckFetch(fn CheckFetchFunc) Option {
 		opts.checkFetch = append(opts.checkFetch, fn)
 		return nil
 	}
+}
+
+// WithOneRequestPerURL uses WithCheckFetch to register a function that will pass once per URL
+func WithOneRequestPerURL() Option {
+	var mut sync.Mutex
+	v := make(map[string]struct{})
+	return WithCheckFetch(func(req *Request) bool {
+		mut.Lock()
+		defer mut.Unlock()
+		_, ok := v[req.URL.String()]
+		if ok {
+			return false
+		}
+		v[req.URL.String()] = struct{}{}
+		return true
+	})
 }

@@ -38,6 +38,9 @@ var SkipURL = errors.New("skip URL")
 //
 // It will return an error if the crawl was prematurely stopped or could not be
 // started.
+//
+// Crawl will always add WithOneRequestPerURL to the options of the worker to
+// avoid infinite loops.
 func (s *Simple) Crawl(startURL string, crawlFn CrawlFunc) error {
 	req, err := NewRequest(startURL)
 	if err != nil {
@@ -50,6 +53,8 @@ func (s *Simple) Crawl(startURL string, crawlFn CrawlFunc) error {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	s.opts = append(s.opts, WithOneRequestPerURL())
 
 	w, err := NewWorker(crawlFn, s.opts...)
 	if err != nil {
