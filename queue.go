@@ -5,7 +5,8 @@ import (
 	"sync"
 )
 
-// Queue is used by workers to keep track of the urls that need to be fetched
+// Queue is used by workers to keep track of the urls that need to be fetched.
+// Queue must be safe to use concurrently.
 type Queue interface {
 	PushBack(*Request) error
 	PopFront() (*Request, error)

@@ -114,9 +114,6 @@ func TestCrawlInvalidStartHost(t *testing.T) {
 }
 
 func TestFetch(t *testing.T) {
-	c, err := New()
-	require.NoError(t, err)
-
 	s := httptest.NewServer(http.FileServer(http.Dir("testdata")))
 	defer s.Close()
 
@@ -135,7 +132,7 @@ func TestFetch(t *testing.T) {
 			req, err := NewRequest(s.URL + test.path)
 			require.NoError(t, err)
 
-			res, err := c.fetch(req)
+			res, err := fetch(http.DefaultClient, req)
 			require.NoError(t, err)
 
 			require.Equal(t, test.expectedURL, res.URL)

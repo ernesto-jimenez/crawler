@@ -1,7 +1,6 @@
 package crawler
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 )
@@ -12,7 +11,7 @@ type Option func(*options) error
 type options struct {
 	maxDepth   int
 	client     *http.Client
-	checkFetch CheckFetchFunc
+	checkFetch []CheckFetchFunc
 }
 
 // WithHTTPClient sets the optional http client
@@ -37,10 +36,7 @@ func WithMaxDepth(depth int) Option {
 // WithCheckFetch takes CheckFetchFunc that will be run before fetching each page to check whether it should be fetched or not
 func WithCheckFetch(fn CheckFetchFunc) Option {
 	return func(opts *options) error {
-		if opts.checkFetch != nil {
-			return errors.New("already set up CheckFetch function")
-		}
-		opts.checkFetch = fn
+		opts.checkFetch = append(opts.checkFetch, fn)
 		return nil
 	}
 }
