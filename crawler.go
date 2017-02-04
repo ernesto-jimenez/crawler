@@ -64,9 +64,15 @@ func (s *Simple) Crawl(startURL string, crawlFn CrawlFunc) error {
 	return w.Run(ctx, queue)
 }
 
-func fetch(c *http.Client, req *Request) (*Response, error) {
+func fetch(ctx context.Context, c *http.Client, req *Request) (*Response, error) {
 	url := req.URL.String()
-	httpRes, err := c.Get(url)
+	httpReq, err := http.NewRequest(http.MethodGet, req.URL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+	httpReq = httpReq.WithContext(ctx)
+
+	httpRes, err := c.Do(httpReq)
 	if err != nil {
 		return nil, err
 	}

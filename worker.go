@@ -54,7 +54,10 @@ func (w *Worker) Run(ctx context.Context, q Queue) error {
 		if !w.checkFetch.CheckFetch(req) {
 			continue
 		}
-		res, err := fetch(w.client, req)
+		res, err := fetch(ctx, w.client, req)
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		// call the CrawlFunc for each fetched url
 		// note this err is scoped to the if and does not override the previous declaration
 		if err := w.fn(req.URL.String(), res, err); err == SkipURL {

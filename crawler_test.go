@@ -1,6 +1,7 @@
 package crawler
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -131,7 +132,7 @@ func TestFetch(t *testing.T) {
 			req, err := NewRequest(s.URL + test.path)
 			require.NoError(t, err)
 
-			res, err := fetch(http.DefaultClient, req)
+			res, err := fetch(context.Background(), http.DefaultClient, req)
 			require.NoError(t, err)
 
 			require.Equal(t, test.expectedURL, res.URL)
