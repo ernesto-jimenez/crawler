@@ -3,6 +3,7 @@ package crawler
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 )
 
@@ -42,7 +43,7 @@ func WithCheckFetch(fn CheckFetchFunc) Option {
 	}
 }
 
-// WithOneRequestPerURL uses WithCheckFetch to register a function that will pass once per URL
+// WithOneRequestPerURL adds a check to only allow URLs once
 func WithOneRequestPerURL() Option {
 	var mut sync.Mutex
 	v := make(map[string]struct{})
@@ -55,5 +56,31 @@ func WithOneRequestPerURL() Option {
 		}
 		v[req.URL.String()] = struct{}{}
 		return true
+	})
+}
+
+// WithAllowedHosts adds a check to only allow URLs with the given hosts
+func WithAllowedHosts(hosts ...string) Option {
+	m := make(map[string]struct{})
+	for _, h := range hosts {
+		h = strings.TrimSpace(h)
+		m[h] = struct{}{}
+	}
+	return WithCheckFetch(func(req *Request) bool {
+		_, ok := m[req.URL.Host]
+		return ok
+	})
+}
+
+// WithExcludedHosts adds a check to only allow URLs with hosts other than the given ones
+func WithExcludedHosts(hosts ...string) Option {
+	m := make(map[string]struct{})
+	for _, h := range hosts {
+		h = strings.TrimSpace(h)
+		m[h] = struct{}{}
+	}
+	return WithCheckFetch(func(req *Request) bool {
+		_, ok := m[req.URL.Host]
+		return !ok
 	})
 }
