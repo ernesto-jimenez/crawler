@@ -1,7 +1,6 @@
 package crawler
 
 import (
-	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -111,33 +110,6 @@ func TestCrawlInvalidStartHost(t *testing.T) {
 		return nil
 	})
 	require.NoError(t, err)
-}
-
-func TestFetch(t *testing.T) {
-	s := httptest.NewServer(http.FileServer(http.Dir("testdata")))
-	defer s.Close()
-
-	tests := []struct {
-		path        string
-		expectedURL string
-	}{
-		{path: "", expectedURL: s.URL + "/"},
-		{path: "/", expectedURL: s.URL + "/"},
-		{path: "/index.html", expectedURL: s.URL + "/"}, // FileServer will redirect to /
-		{path: "/#with-fragment", expectedURL: s.URL + "/"},
-	}
-
-	for _, test := range tests {
-		t.Run(test.path, func(t *testing.T) {
-			req, err := NewRequest(s.URL + test.path)
-			require.NoError(t, err)
-
-			res, err := fetch(context.Background(), http.DefaultClient, req)
-			require.NoError(t, err)
-
-			require.Equal(t, test.expectedURL, res.URL)
-		})
-	}
 }
 
 type expectedPage struct {

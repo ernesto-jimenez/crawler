@@ -6,10 +6,8 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
-	"net/http"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/ernesto-jimenez/crawler"
 	"github.com/ernesto-jimenez/httplogger"
@@ -51,10 +49,7 @@ func main() {
 	}
 
 	opts := []crawler.Option{
-		crawler.WithHTTPClient(&http.Client{
-			Transport: httplogger.DefaultLoggedTransport,
-			Timeout:   5 * time.Second,
-		}),
+		crawler.WithHTTPTransport(httplogger.DefaultLoggedTransport),
 		crawler.WithMaxDepth(maxDepth),
 		crawler.WithExcludedHosts(strings.Split(excludeHosts, ",")...),
 	}

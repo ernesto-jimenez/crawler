@@ -8,7 +8,8 @@ import (
 type Request struct {
 	URL *url.URL
 
-	depth int
+	depth     int
+	redirects int
 }
 
 // NewRequest initialises a new crawling request to extract information from a single URL

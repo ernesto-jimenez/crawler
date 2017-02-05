@@ -71,3 +71,46 @@ func TestWorkerCancelsHTTPRequest(t *testing.T) {
 	r.Equal(context.Canceled, err)
 	r.Equal(1, q.PopFrontTotalCalls())
 }
+
+func TestFetch(t *testing.T) {
+	sf := http.FileServer(http.Dir("testdata"))
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Log(r.URL.Path)
+		if r.URL.Path == "/redirect" {
+			t.Log("redirect")
+			http.Redirect(w, r, "/ok", http.StatusFound)
+		} else {
+			sf.ServeHTTP(w, r)
+		}
+	}))
+	defer s.Close()
+
+	c := &http.Client{
+		CheckRedirect: skipRedirects,
+	}
+
+	tests := []struct {
+		path             string
+		expectedURL      string
+		expectedRedirect string
+	}{
+		{path: "", expectedURL: s.URL + "/"},
+		{path: "/", expectedURL: s.URL + "/"},
+		{path: "/index.html", expectedURL: s.URL + "/index.html", expectedRedirect: s.URL + "/"},
+		{path: "/#with-fragment", expectedURL: s.URL + "/"},
+		{path: "/redirect", expectedURL: s.URL + "/redirect", expectedRedirect: s.URL + "/ok"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.path, func(t *testing.T) {
+			req, err := NewRequest(s.URL + test.path)
+			require.NoError(t, err)
+
+			res, err := fetch(context.Background(), c, req)
+			require.NoError(t, err)
+
+			require.Equal(t, test.expectedURL, res.URL)
+			require.Equal(t, test.expectedRedirect, res.RedirectTo)
+		})
+	}
+}

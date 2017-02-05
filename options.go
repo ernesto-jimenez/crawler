@@ -12,14 +12,14 @@ type Option func(*options) error
 
 type options struct {
 	maxDepth   int
-	client     *http.Client
+	transport  http.RoundTripper
 	checkFetch []CheckFetchFunc
 }
 
-// WithHTTPClient sets the optional http client
-func WithHTTPClient(client *http.Client) Option {
+// WithHTTPTransport sets the optional http client
+func WithHTTPTransport(rt http.RoundTripper) Option {
 	return func(opts *options) error {
-		opts.client = client
+		opts.transport = rt
 		return nil
 	}
 }
