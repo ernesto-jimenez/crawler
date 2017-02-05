@@ -1,6 +1,12 @@
 # crawler
---
-    import "github.com/ernesto-jimenez/crawler"
+
+[![Build Status](https://travis-ci.org/ernesto-jimenez/crawler.svg?branch=master)](https://travis-ci.org/ernesto-jimenez/crawler)
+
+A simple package to quickly build programs that require crawling websites.
+
+```
+go get github.com/ernesto-jimenez/crawler
+```
 
 
 ## Usage
