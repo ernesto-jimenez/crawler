@@ -3,7 +3,6 @@ package crawler
 import (
 	"container/list"
 	"context"
-	"log"
 	"sync"
 )
 
@@ -77,7 +76,6 @@ func (q *InMemoryQueue) PushBack(req *Request) error {
 		q.mut.Lock()
 		defer q.mut.Unlock()
 		q.inFlight--
-		log.Println(q.inFlight)
 		if q.inFlight == 0 {
 			close(q.done)
 		}
