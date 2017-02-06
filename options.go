@@ -1,7 +1,6 @@
 package crawler
 
 import (
-	"fmt"
 	"net/http"
 	"strings"
 	"sync"
@@ -24,15 +23,15 @@ func WithHTTPTransport(rt http.RoundTripper) Option {
 	}
 }
 
-// WithMaxDepth sets the max depth of the crawl
+// WithMaxDepth sets the max depth of the crawl. It must be over zero or
+// the call will panic.
 func WithMaxDepth(depth int) Option {
-	return func(opts *options) error {
-		if depth < 0 {
-			return fmt.Errorf("depth must be greater or equal than zero. was: %d", depth)
-		}
-		opts.maxDepth = depth
-		return nil
+	if depth <= 0 {
+		panic("depth should always be greater or than zero")
 	}
+	return WithCheckFetch(func(req *Request) bool {
+		return req.depth <= depth
+	})
 }
 
 // WithCheckFetch takes CheckFetchFunc that will be run before fetching each page to check whether it should be fetched or not

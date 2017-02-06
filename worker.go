@@ -31,7 +31,7 @@ type Worker struct {
 	client     *http.Client
 	fn         CrawlFunc
 	checkFetch CheckFetchStack
-	maxDepth   int
+	maxRedirs  int
 }
 
 // NewWorker initialises a goroutine
@@ -51,7 +51,6 @@ func NewWorker(fn CrawlFunc, opts ...Option) (*Worker, error) {
 			Transport:     o.transport,
 			CheckRedirect: skipRedirects,
 		},
-		maxDepth:   o.maxDepth,
 		checkFetch: CheckFetchStack(o.checkFetch),
 		fn:         fn,
 	}, nil
