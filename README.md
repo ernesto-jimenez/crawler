@@ -1,5 +1,6 @@
 # crawler
 
+[![GoDoc](https://godoc.org/github.com/ernesto-jimenez/crawler?status.svg)](https://godoc.org/github.com/ernesto-jimenez/crawler)
 [![Build Status](https://travis-ci.org/ernesto-jimenez/crawler.svg?branch=master)](https://travis-ci.org/ernesto-jimenez/crawler)
 [![Coverage Status](https://coveralls.io/repos/ernesto-jimenez/crawler/badge.svg?branch=master&service=github)](https://coveralls.io/github/ernesto-jimenez/crawler?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/ernesto-jimenez/crawler)](https://goreportcard.com/ernesto-jimenez/crawler)
