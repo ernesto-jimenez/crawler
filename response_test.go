@@ -1,6 +1,7 @@
 package crawler
 
 import (
+	"net/url"
 	"os"
 	"testing"
 
@@ -8,13 +9,21 @@ import (
 )
 
 func TestReadResponse(t *testing.T) {
+	var u = func(uri string) *url.URL {
+		u, err := url.Parse(uri)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return u
+	}
+
 	tests := []struct {
-		base    string
+		base    *url.URL
 		file    string
 		expects Response
 	}{
 		{
-			base: "https://base.test/path/to/request",
+			base: u("https://base.test/path/to/request"),
 			file: "testdata/index.html",
 			expects: Response{
 				URL: "https://base.test/path/to/request",
@@ -34,7 +43,7 @@ func TestReadResponse(t *testing.T) {
 			},
 		},
 		{
-			base: "https://example",
+			base: u("https://example"),
 			file: "testdata/assets.html",
 			expects: Response{
 				URL: "https://example",

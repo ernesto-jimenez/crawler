@@ -9,10 +9,10 @@ import (
 
 // Response has the details from crawling a single URL
 type Response struct {
-	URL         string  `json:"url"`
-	OriginalURL string  `json:"original_url,omitempty"`
-	Links       []Link  `json:"links"`
-	Assets      []Asset `json:"assets"`
+	URL        string  `json:"url"`
+	RedirectTo string  `json:"redirect_to,omitempty"`
+	Links      []Link  `json:"links"`
+	Assets     []Asset `json:"assets"`
 
 	request *Request
 }
@@ -40,12 +40,7 @@ type Asset struct {
 
 // ReadResponse extracts links and assets from the HTML read form the given io
 // reader and fills it in the response
-func ReadResponse(baseURL string, r io.Reader, res *Response) error {
-	base, err := url.Parse(baseURL)
-	if err != nil {
-		return err
-	}
-
+func ReadResponse(base *url.URL, r io.Reader, res *Response) error {
 	res.URL = base.String()
 	res.Links = nil
 	res.Assets = nil

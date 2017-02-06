@@ -2,6 +2,8 @@ package crawler
 
 import (
 	"container/list"
+	"context"
+	"log"
 	"sync"
 )
 
@@ -14,43 +16,96 @@ type Queue interface {
 
 // InMemoryQueue holds a queue of items to be crawled in memory
 type InMemoryQueue struct {
-	mut   sync.Mutex
-	queue *list.List
+	ctx  context.Context
+	in   chan *Request
+	out  chan *Request
+	done chan struct{}
+
+	inFlight int64
+	mut      sync.Mutex
 }
 
 // NewInMemoryQueue returns an in memory queue ready to be used by different workers
-func NewInMemoryQueue() *InMemoryQueue {
-	q := &InMemoryQueue{}
-	q.Init()
+func NewInMemoryQueue(ctx context.Context) *InMemoryQueue {
+	q := &InMemoryQueue{
+		ctx:  ctx,
+		in:   make(chan *Request),
+		out:  make(chan *Request),
+		done: make(chan struct{}),
+	}
+	go q.run()
 	return q
 }
 
-// Init is used to initialise the unexported fields on the InMemoryQueue. It is already called by NewInMemoryQueue and it only has to be called manually once if when initialising an InMemoryQueue with a literal.
-//
-// It will panic if called twice on the same queue.
-func (q *InMemoryQueue) Init() {
-	q.mut.Lock()
-	defer q.mut.Unlock()
+func (q *InMemoryQueue) run() {
+	queue := list.New()
 
-	if q.queue != nil {
-		panic("init called on already initialised queue")
+	for {
+		var (
+			out  = q.out
+			next *Request
+		)
+		front := queue.Front()
+		if front == nil {
+			out = nil
+		} else {
+			next = front.Value.(*Request)
+		}
+
+		select {
+		case req := <-q.in:
+			queue.PushBack(req)
+		case out <- next:
+			queue.Remove(front)
+		case <-q.ctx.Done():
+			return
+		case <-q.done:
+			return
+		}
 	}
-	q.queue = list.New()
 }
 
 // PushBack adds a request to the queue
 func (q *InMemoryQueue) PushBack(req *Request) error {
-	q.queue.PushBack(req)
+	if req.finished {
+		panic("requeueing finished request is forbidden")
+	}
+	q.mut.Lock()
+	defer q.mut.Unlock()
+
+	req.onFinish = func() {
+		q.mut.Lock()
+		defer q.mut.Unlock()
+		q.inFlight--
+		log.Println(q.inFlight)
+		if q.inFlight == 0 {
+			close(q.done)
+		}
+	}
+
+	select {
+	case <-q.ctx.Done():
+		return q.ctx.Err()
+	case <-q.done:
+		panic("cannot push after queue was exhausted")
+	case q.in <- req:
+		q.inFlight++
+	}
 	return nil
 }
 
 // PopFront gets the next request from the queue.
 // It will return a nil request and a nil error if the queue is empty.
 func (q *InMemoryQueue) PopFront() (*Request, error) {
-	v := q.queue.Front()
-	if v == nil {
+	select {
+	case req := <-q.out:
+		if req.finished {
+			panic("popped message had already been finished")
+		}
+		return req, nil
+	case <-q.done:
 		return nil, nil
+	case <-q.ctx.Done():
+		return nil, q.ctx.Err()
 	}
-	q.queue.Remove(v)
-	return v.Value.(*Request), nil
 }

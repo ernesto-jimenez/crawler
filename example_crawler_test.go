@@ -20,7 +20,7 @@ func Example() {
 			return nil
 		}
 		fmt.Printf("%s - Links: %d Assets: %d\n", url, len(res.Links), len(res.Assets))
-		return crawler.SkipURL
+		return crawler.ErrSkipURL
 	})
 	if err != nil {
 		panic(err)

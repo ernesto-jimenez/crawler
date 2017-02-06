@@ -2,8 +2,24 @@ package crawler
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"net/http"
+	"net/url"
 )
+
+// CrawlFunc is the type of the function called for each webpage visited by
+// Crawl. The incoming url specifies which url was fetched, while res contains
+// the response of the fetched URL if it was successful. If the fetch failed,
+// the incoming error will specify the reason and res will be nil.
+//
+// Returning ErrSkipURL will avoid queing up the resources links to be crawled.
+//
+// Returning any other error from the function will immediately stop the crawl.
+type CrawlFunc func(url string, res *Response, err error) error
+
+// ErrSkipURL can be returned by CrawlFunc to avoid crawling the links from the given url
+var ErrSkipURL = errors.New("skip URL")
 
 // Runner defines the interface requred to run a crawl
 type Runner interface {
@@ -15,13 +31,13 @@ type Worker struct {
 	client     *http.Client
 	fn         CrawlFunc
 	checkFetch CheckFetchStack
-	maxDepth   int
+	maxRedirs  int
 }
 
 // NewWorker initialises a goroutine
 func NewWorker(fn CrawlFunc, opts ...Option) (*Worker, error) {
 	o := options{
-		client: http.DefaultClient,
+		transport: http.DefaultTransport,
 	}
 
 	for _, opt := range opts {
@@ -31,8 +47,10 @@ func NewWorker(fn CrawlFunc, opts ...Option) (*Worker, error) {
 	}
 
 	return &Worker{
-		client:     o.client,
-		maxDepth:   o.maxDepth,
+		client: &http.Client{
+			Transport:     o.transport,
+			CheckRedirect: skipRedirects,
+		},
 		checkFetch: CheckFetchStack(o.checkFetch),
 		fn:         fn,
 	}, nil
@@ -52,6 +70,7 @@ func (w *Worker) Run(ctx context.Context, q Queue) error {
 			return nil
 		}
 		if !w.checkFetch.CheckFetch(req) {
+			req.Finish()
 			continue
 		}
 		res, err := fetch(ctx, w.client, req)
@@ -60,23 +79,79 @@ func (w *Worker) Run(ctx context.Context, q Queue) error {
 		}
 		// call the CrawlFunc for each fetched url
 		// note this err is scoped to the if and does not override the previous declaration
-		if err := w.fn(req.URL.String(), res, err); err == SkipURL {
+		if err := w.fn(req.URL.String(), res, err); err == ErrSkipURL {
+			req.Finish()
 			continue
 		} else if err != nil {
 			return err
 		}
 		// continue if there was an error crawlking
 		if err != nil {
+			req.Finish()
 			continue
 		}
-		// Mark the response as visited since it might be different to the original URL due to redirects
-		if w.maxDepth > 0 && w.maxDepth <= req.depth {
-			continue
+		if req, err := nextRequest(res, res.RedirectTo); err == nil {
+			q.PushBack(req)
 		}
 		for _, link := range res.Links {
 			if req, err := nextRequest(res, link.URL); err == nil {
 				q.PushBack(req)
 			}
 		}
+		req.Finish()
 	}
+}
+
+func skipRedirects(req *http.Request, via []*http.Request) error {
+	return http.ErrUseLastResponse
+}
+
+func fetch(ctx context.Context, c *http.Client, req *Request) (*Response, error) {
+	uri := req.URL.String()
+	httpReq, err := http.NewRequest(http.MethodGet, uri, nil)
+	if err != nil {
+		return nil, err
+	}
+	httpReq = httpReq.WithContext(ctx)
+
+	httpRes, err := c.Do(httpReq)
+	if err != nil {
+		return nil, err
+	}
+	defer httpRes.Body.Close()
+	res := Response{
+		request: req,
+	}
+	switch httpRes.StatusCode {
+	case http.StatusOK:
+	case http.StatusMovedPermanently, http.StatusFound:
+		res.URL = httpRes.Request.URL.String()
+		loc, err := url.Parse(httpRes.Header.Get("Location"))
+		if err != nil {
+			return nil, err
+		}
+		res.RedirectTo = httpRes.Request.URL.ResolveReference(loc).String()
+		return &res, nil
+	default:
+		return nil, fmt.Errorf("%s for %s", httpRes.Status, uri)
+	}
+	err = ReadResponse(httpRes.Request.URL, httpRes.Body, &res)
+	return &res, nil
+}
+
+func nextRequest(res *Response, href string) (*Request, error) {
+	if href == "" {
+		return nil, ErrSkipURL
+	}
+	req, err := NewRequest(href)
+	if err != nil {
+		return nil, err
+	}
+	if res.RedirectTo == "" {
+		req.depth = res.request.depth + 1
+		req.redirects = 0
+	} else {
+		req.redirects = res.request.redirects + 1
+	}
+	return req, nil
 }
