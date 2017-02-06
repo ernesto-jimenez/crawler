@@ -70,6 +70,7 @@ func (w *Worker) Run(ctx context.Context, q Queue) error {
 			return nil
 		}
 		if !w.checkFetch.CheckFetch(req) {
+			req.Finish()
 			continue
 		}
 		res, err := fetch(ctx, w.client, req)
@@ -79,16 +80,14 @@ func (w *Worker) Run(ctx context.Context, q Queue) error {
 		// call the CrawlFunc for each fetched url
 		// note this err is scoped to the if and does not override the previous declaration
 		if err := w.fn(req.URL.String(), res, err); err == ErrSkipURL {
+			req.Finish()
 			continue
 		} else if err != nil {
 			return err
 		}
 		// continue if there was an error crawlking
 		if err != nil {
-			continue
-		}
-		// Mark the response as visited since it might be different to the original URL due to redirects
-		if w.maxDepth > 0 && w.maxDepth <= req.depth {
+			req.Finish()
 			continue
 		}
 		if req, err := nextRequest(res, res.RedirectTo); err == nil {
@@ -99,6 +98,7 @@ func (w *Worker) Run(ctx context.Context, q Queue) error {
 				q.PushBack(req)
 			}
 		}
+		req.Finish()
 	}
 }
 

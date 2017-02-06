@@ -10,6 +10,8 @@ type Request struct {
 
 	depth     int
 	redirects int
+	finished  bool
+	onFinish  func()
 }
 
 // NewRequest initialises a new crawling request to extract information from a single URL
@@ -25,4 +27,12 @@ func NewRequest(uri string) (*Request, error) {
 	return &Request{
 		URL: u,
 	}, nil
+}
+
+// Finish should be called once the request has been completed
+func (r *Request) Finish() {
+	if r.onFinish != nil {
+		r.onFinish()
+	}
+	r.finished = true
 }

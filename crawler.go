@@ -29,12 +29,12 @@ func (s *Simple) Crawl(startURL string, crawlFn CrawlFunc) error {
 		return err
 	}
 
-	// initialise the queue
-	queue := NewInMemoryQueue()
-	queue.PushBack(req)
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	// initialise the queue
+	queue := NewInMemoryQueue(ctx)
+	queue.PushBack(req)
 
 	s.opts = append(s.opts, WithOneRequestPerURL())
 
