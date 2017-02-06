@@ -7,10 +7,17 @@ matrix:
     - go: tip
 
 install:
-  - # Skip
+  - go get golang.org/x/tools/cmd/cover
+  - go get github.com/mattn/goveralls
 
 script:
   - go get -t -v ./...
   - diff -u <(echo -n) <(gofmt -d .)
   - go tool vet .
   - go test -v -race ./... -timeout=10s
+  - go test -v -covermode=count -coverprofile=coverage.out
+  - goveralls -coverprofile=coverage.out -service=travis-ci -repotoken $COVERALLS_TOKEN
+
+env:
+  global:
+    secure: IFgeopTD7GdBqc5N38lL48ZtmT5WGb/+HSohw8SxlY3cJk3F0oEAN1qCvw5eIeAy8Cl/dj1l7rHIRBYXRvQ35rsGs5zLKmGX7pEhIgDTtm7ZNpVfNIdov2WzQh+vltM44UKGN5OtLnEw7zBePzb4Lfa2KyqJOj01be+JlPV1d6QybuMnT3xXNPfX7TV85XvkEhjS5rZEZs9W1rQfarcGltVsLIyZ/dlj0bTS5WkqQZlCipV3G4UHSuk8z4TOivR/x+anRZT9BD5kAiELxGlxZUmjxUl8stXXuydefQiW5sDUfa53gbzPiYoQEMbIxX9vtfo/9NA6li83GDJl4r0nzrBf4xZh2kWqM73MTrYzy5JX4eyj9CdAG/sHVsWwfjgaYb6XIKKeUe6sadESaXIFKC+6RgexVTs1n/bn5vvzfPDB+LFYRVyqLkJow1jFK+cqC9yDMCV1et4o0p2wPPZjO6q7WgfrltkD80X1AuhcBz8TjJyl4KhVwNZ10foDg92rX5nRovO4fCssoNG5hlv5djAm876CoVhfPHI0tHOhz+zgrO0JYF7fOTtV2uuN5sBWf0ZaxKg26cau6/s6wH/46eiF0K/Tc4R7/jNijJrrOuYeDbfOIv7AFqGIf4pxbp6vuWVbIGSJ3zJYvuiWEeIv778DWB0KaR+tWgolC6HCev0=
