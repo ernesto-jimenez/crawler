@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 
 	"golang.org/x/sync/errgroup"
@@ -159,7 +160,9 @@ func fetch(ctx context.Context, c *http.Client, req *Request) (*Response, error)
 	default:
 		return nil, fmt.Errorf("%s for %s", httpRes.Status, uri)
 	}
-	err = ReadResponse(httpRes.Request.URL, httpRes.Body, &res)
+	if strings.Contains(httpRes.Header.Get("Content-Type"), "text/html") {
+		err = ReadResponse(httpRes.Request.URL, httpRes.Body, &res)
+	}
 	return &res, nil
 }
 
