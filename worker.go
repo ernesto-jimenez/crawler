@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"sync"
+
+	"golang.org/x/sync/errgroup"
 )
 
 // CrawlFunc is the type of the function called for each webpage visited by
@@ -32,6 +35,7 @@ type Worker struct {
 	fn         CrawlFunc
 	checkFetch CheckFetchStack
 	maxRedirs  int
+	goroutines int
 }
 
 // NewWorker initialises a goroutine
@@ -46,18 +50,27 @@ func NewWorker(fn CrawlFunc, opts ...Option) (*Worker, error) {
 		}
 	}
 
+	if o.goroutines == 0 {
+		o.goroutines = 1
+	}
+	var mut sync.Mutex
+
 	return &Worker{
 		client: &http.Client{
 			Transport:     o.transport,
 			CheckRedirect: skipRedirects,
 		},
 		checkFetch: CheckFetchStack(o.checkFetch),
-		fn:         fn,
+		fn: func(url string, res *Response, err error) error {
+			mut.Lock()
+			defer mut.Unlock()
+			return fn(url, res, err)
+		},
+		goroutines: o.goroutines,
 	}, nil
 }
 
-// Run starts processing requests from the queue
-func (w *Worker) Run(ctx context.Context, q Queue) error {
+func (w *Worker) run(ctx context.Context, q Queue) error {
 	for {
 		if err := ctx.Err(); err != nil {
 			return err
@@ -100,6 +113,17 @@ func (w *Worker) Run(ctx context.Context, q Queue) error {
 		}
 		req.Finish()
 	}
+}
+
+// Run starts processing requests from the queue
+func (w *Worker) Run(ctx context.Context, q Queue) error {
+	g, ctx := errgroup.WithContext(ctx)
+	for i := 0; i < w.goroutines; i++ {
+		g.Go(func() error {
+			return w.run(ctx, q)
+		})
+	}
+	return g.Wait()
 }
 
 func skipRedirects(req *http.Request, via []*http.Request) error {

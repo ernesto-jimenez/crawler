@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+
+	"github.com/pkg/errors"
 )
 
 // Option is used to provide optional configuration to a crawler
@@ -13,6 +15,18 @@ type options struct {
 	maxDepth   int
 	transport  http.RoundTripper
 	checkFetch []CheckFetchFunc
+	goroutines int
+}
+
+// WithConcurrentRequests sets how many concurrent requests to allow
+func WithConcurrentRequests(n int) Option {
+	return func(opts *options) error {
+		if n <= 0 {
+			return errors.Errorf("number of workers must be a positive integer. was: %d", n)
+		}
+		opts.goroutines = n
+		return nil
+	}
 }
 
 // WithHTTPTransport sets the optional http client
